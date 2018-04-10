@@ -54,14 +54,14 @@
 </head>
 <body>
 	Sender: <input id="seed" onkeyup="updateInput(); updateExtrinsic()"/> = <input readonly id="pubkey"/><br/>
-	Balance location: <input readonly id="balanceLocation"/><br/>
+	<div style="color: #888; font-size: small; font-family: monospace">curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"state_getStorage","params":["0x<span id="balanceLocation"></span>"],"id":"1"}' 127.0.0.1:9933</div>
 
 	Index: <input id="index" onkeyup="updateExtrinsic()" value="0"/><br/>
 	Transfer: <input id="dest" onkeyup="updateExtrinsic()" value="d7568e5f0a7eda67a82691ff379ac4bba4f9c9b859fe779b5d46363b61ad2db9"/> <input id="amount" onkeyup="updateExtrinsic()" value="69"/><br/>
 
 	Inner: <input readonly id="inner"/><br/>
 	Sig: <input readonly id="sig"/><br/>
-	Complete: <input readonly id="signed"/><br/>
+	<div style="color: #888; font-size: small; font-family: monospace">curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"author_submitExtrinsic","params":["0x<span id="signed"></span>"],"id":"1"}' 127.0.0.1:9933</div>
 
 	<script>
 	function updateInput() {
@@ -71,7 +71,7 @@
 		document.getElementById("pubkey").value = pubkey;
 
 		let loc = new Uint8Array([...stringToBytes('sta:bal:'), ...hexToBytes(pubkey)]);
-		document.getElementById("balanceLocation").value =
+		document.getElementById("balanceLocation").innerHTML =
 			toLEHex(XXH.h64(loc.buffer, 0), 8) + toLEHex(XXH.h64(loc.buffer, 1), 8);
 	}
 	function updateExtrinsic() {
@@ -90,7 +90,7 @@
 		document.getElementById("sig").value = sig;
 		ext += sig;
 
-		document.getElementById("signed").value = ext;
+		document.getElementById("signed").innerHTML = ext;
 	}
 	</script>
 </body>
