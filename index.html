@@ -50,6 +50,27 @@
 			}
 			return le;
 		}
+
+		const CALLS = [{
+			name: 'consensus',
+			calls: []
+		},{
+			name: 'session',
+			calls: []
+		},{
+			name: 'staking',
+			calls: [{
+				name: 'transfer',
+				params: [
+					{ name: 'dest', type: 'AccountId' },
+					{ name: 'value', type: 'Balance' }
+				]
+			},{
+				name: 'stake', params: []
+			},{
+				name: 'unstake', params: []
+			}]
+		}]
 	</script>
 </head>
 <body>
@@ -57,13 +78,65 @@
 	<div style="color: #888; font-size: small; font-family: monospace">curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"state_getStorage","params":["0x<span id="balanceLocation"></span>"],"id":"1"}' 127.0.0.1:9933</div>
 
 	Index: <input id="index" onkeyup="updateExtrinsic()" value="0"/><br/>
-	Transfer: <input id="dest" onkeyup="updateExtrinsic()" value="d7568e5f0a7eda67a82691ff379ac4bba4f9c9b859fe779b5d46363b61ad2db9"/> <input id="amount" onkeyup="updateExtrinsic()" value="69"/><br/>
+	Call: <select id="call" onchange="updateCall()"></select>
+	<div id="params"></div>
 
 	Inner: <input readonly id="inner"/><br/>
 	Sig: <input readonly id="sig"/><br/>
 	<div style="color: #888; font-size: small; font-family: monospace">curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"author_submitExtrinsic","params":["0x<span id="signed"></span>"],"id":"1"}' 127.0.0.1:9933</div>
 
 	<script>
+	function updateCalls() {
+		let h = '';
+		CALLS.forEach((mod, mi) => {
+			if (mod.calls.length > 0) {
+				h += `<optgroup label=${mod.name}>`;
+				mod.calls.forEach((call, ci) => {
+					h += `<option id="${mi}.${ci}">${call.name}</option>`;
+				});
+				h += `</optgroup>`;
+			}
+		})
+		document.getElementById('call').innerHTML = h;
+		updateCall();
+	}
+	function isValid(value, type) {
+		switch (type) {
+			case 'AccountId': return value.length == 20 && !Number.isNaN(Number.parseInt(value, 16));
+			case 'Balance': return '' + +value == value;
+			default: return false;
+		}
+	}
+	function updateCall() {
+		let id = document.getElementById('call').selectedOptions[0].id.split('.');
+		let params = CALLS[id[0]].calls[id[1]].params;
+		let h = '';
+			//if (isValid(this.value, '${p.type}') { this.validity.badInput = false; updateExtrinsic(); } else this.validity.badInput = true;
+		params.forEach(p => {
+			h += `<div>${p.name}: <input id="param_${p.name}" onkeyup="updateExtrinsic()"></input></div>`;
+		});
+		document.getElementById('params').innerHTML = h;
+		updateExtrinsic();
+	}
+	function encodedCall() {
+		let id = document.getElementById('call').selectedOptions[0].id.split('.');
+		let params = CALLS[id[0]].calls[id[1]].params;
+		let h = id.map(i => toLEHex(i, 1)).join('');
+		params.forEach(p => {
+			let v = document.getElementById('param_' + p.name).value;
+			switch (p.type) {
+				case 'AccountId': {
+					if (v.length == 20 && !Number.isNaN(Number.parseInt(v, 16)))
+						h += v;
+					else
+						h += bytesToHex(nacl.sign.keyPair.fromSeed(stringToSeed(v)).publicKey);
+					break;
+				}
+				case 'Balance': { h += toLEHex(+v, 8); break; }
+			}
+		});
+		return h;
+	}
 	function updateInput() {
 		let seed = document.getElementById("seed").value;
 		let p = nacl.sign.keyPair.fromSeed(stringToSeed(seed));
@@ -78,10 +151,8 @@
 		var seed = document.getElementById("seed").value;
 		var sender = document.getElementById("pubkey").value;
 		var index = +document.getElementById("index").value;
-		var dest = document.getElementById("dest").value;
-		var amount = +document.getElementById("amount").value;
 
-		let ext = sender + toLEHex(index, 8) + '0200' + dest + toLEHex(amount, 8);
+		let ext = sender + toLEHex(index, 8) + encodedCall();
 
 		document.getElementById("inner").value = ext;
 
@@ -92,6 +163,7 @@
 
 		document.getElementById("signed").innerHTML = ext;
 	}
+	updateCalls();
 	</script>
 </body>
 </html>
