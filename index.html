@@ -50,15 +50,7 @@
 			}
 			return le;
 		}
-/*
-{
-	name: '',
-	params: [{
-		name: '',
-		type: ''
-	}]
-}
-*/
+
 		const CALLS = [{
 			name: 'consensus',
 			calls: interpretRustCalls(`
@@ -177,60 +169,118 @@
 			default: return true;
 		}
 	}
+	function paramsFor(id, name) {
+		let params = CALLS[id[0]].priv_calls[id[1]].params;
+		let h = '';
+		params.forEach(p => {
+			h += `<div>${p.name}: ${inputFor(p.type, name + '.params.' + p.name)}</div>`;
+		});
+		return h;
+	}
+	function updateProposal(name) {
+		let id = document.getElementById(name).selectedOptions[0].id.split('.');
+		document.getElementById(name + '.params').innerHTML = paramsFor(id, name);
+		updateExtrinsic();
+	}
+	function inputFor(type, name) {
+		switch (type) {
+			case 'Proposal': {
+				var id = null;
+				var h = `<div>${name}: <select id="${name}" onchange="updateProposal('${name}')">`;
+				CALLS.forEach((mod, mi) => {
+					if (mod.priv_calls.length > 0) {
+						h += `<optgroup label=${mod.name}>`;
+						mod.priv_calls.forEach((call, ci) => {
+							if (!id) id = [mi, ci];
+							h += `<option id="${mi}.${ci}">${call.name}</option>`;
+						});
+						h += `</optgroup>`;
+					}
+				});
+				h += `</select><div id="${name}.params">`;
+				h += paramsFor(id, name);
+				h += `</div></div>`;
+				return h;
+			}
+			default: return `<input id="${name}" onkeyup="updateExtrinsic()"></input></div>`;
+		}
+	}
 	function updateCall() {
 		let id = document.getElementById('call').selectedOptions[0].id.split('.');
 		let params = CALLS[id[0]].calls[id[1]].params;
 		let h = '';
 			//if (isValid(this.value, '${p.type}') { this.validity.badInput = false; updateExtrinsic(); } else this.validity.badInput = true;
 		params.forEach(p => {
-			h += `<div>${p.name}: <input id="param_${p.name}" onkeyup="updateExtrinsic()"></input></div>`;
+			h += `<div>${p.name}: ${inputFor(p.type, 'param_' + p.name)}</div>`;
 		});
 		document.getElementById('params').innerHTML = h;
 		updateExtrinsic();
+	}
+	function encodeParam(type, name) {
+		switch (type) {
+			case 'AccountId':
+			case 'Hash': {
+				// TODO: better account id
+				let v = document.getElementById(name).value;
+				if (v.length == 64 && !Number.isNaN(Number.parseInt(v, 16)))
+					return v;
+				else
+					return bytesToHex(nacl.sign.keyPair.fromSeed(stringToSeed(v)).publicKey);
+			}
+			case 'Balance':
+			case 'BlockNumber': {
+				// TODO: integer input
+				let v = document.getElementById(name).value;
+				return toLEHex(+v, 8);
+			}
+			case 'Proposal': {
+				let id = document.getElementById(name).selectedOptions[0].id.split('.');
+				let params = CALLS[id[0]].priv_calls[id[1]].params;
+				let h = id.map(i => toLEHex(i, 1)).join('');
+				params.forEach(p => {
+					h += encodeParam(p.type, name + '.params.' + p.name);
+				});
+				return h;
+			}
+			case 'VoteThreshold': throw 'Unimplemented';
+			case 'u32':
+			case 'VoteIndex':
+			case 'PropIndex':
+			case 'ReferendumIndex': {
+				// TODO: integer input
+				let v = document.getElementById(name).value;
+				return toLEHex(+v, 4);
+			}
+			case 'bool': {
+				// TODO: checkbox
+				let v = document.getElementById(name).value;
+				return (v == 'true' || v == 1) ? '01' : '00';
+			}
+			case 'Vec<bool>': {
+				// TODO: dynamic array of checkboxes
+				let v = document.getElementById(name).value;
+				h += toLEHex(v.length, 4);
+				for (i in v) {
+					h += '0' + i;
+				}
+				return h;
+			}
+			case 'Vec<u8>': {
+				// TODO: upload widget
+				let v = document.getElementById(name).value;
+				return toLEHex(v.length / 2, 4) + v;
+			}
+			default: {
+				return document.getElementById(name).value;
+			}
+		}
 	}
 	function encodedCall() {
 		let id = document.getElementById('call').selectedOptions[0].id.split('.');
 		let params = CALLS[id[0]].calls[id[1]].params;
 		let h = id.map(i => toLEHex(i, 1)).join('');
 		params.forEach(p => {
-			let v = document.getElementById('param_' + p.name).value;
-			switch (p.type) {
-				case 'AccountId':
-				case 'Hash': {
-					if (v.length == 64 && !Number.isNaN(Number.parseInt(v, 16)))
-						h += v;
-					else
-						h += bytesToHex(nacl.sign.keyPair.fromSeed(stringToSeed(v)).publicKey);
-					break;
-				}
-				case 'Balance':
-				case 'BlockNumber': {
-					h += toLEHex(+v, 8);
-					break;
-				}
-				case 'Proposal': throw 'Not supported yet';
-				case 'u32':
-				case 'VoteIndex':
-				case 'PropIndex':
-				case 'ReferendumIndex': {
-					h += toLEHex(+v, 4);
-					break;
-				}
-				case 'bool': {
-					h += (v == 'true' || v == 1) ? '01' : '00';
-					break;
-				}
-				case 'Vec<bool>': {
-					h += toLEHex(v.length, 4);
-					for (i in v) {
-						h += '0' + i;
-					}
-				}
-				case 'Vec<u8>': {
-					h += toLEHex(v.length / 2, 4) + v;
-				}
-				default: { h += v; break; }
-			}
+			h += encodeParam(p.type, 'param_' + p.name);
 		});
 		return h;
 	}
