@@ -65,6 +65,7 @@
 			`),
 			priv_calls: interpretRustCalls(`
 		fn set_code(new: Vec<u8>) = 0;
+		fn set_storage(items: Vec<KeyValue>) = 1;
 			`)
 		},{
 			name: 'session',
@@ -226,6 +227,9 @@
 				<option value="02">Simple majority</option>
 				</select>`;
 			}
+			case 'Vec<KeyValue>': {
+				return `<input id="${name}_key" onkeyup="updateExtrinsic()"></input> = <input id="${name}_value" onkeyup="updateExtrinsic()"></input>`;
+			}
 			default: return `<input id="${name}" onkeyup="updateExtrinsic()"></input>`;
 		}
 	}
@@ -283,7 +287,7 @@
 			case 'Vec<bool>': {
 				// TODO: dynamic array of checkboxes
 				let v = document.getElementById(name).value;
-				h += toLEHex(v.length, 4);
+				let h = toLEHex(v.length, 4);
 				for (i in v) {
 					h += '0' + i;
 				}
@@ -293,6 +297,13 @@
 				// TODO: upload widget
 				let v = document.getElementById(name).value;
 				return toLEHex(v.length / 2, 4) + v;
+			}
+			case 'Vec<KeyValue>': {
+				let k = document.getElementById(`${name}_key`).value;
+				k = toLEHex(k.length / 2, 4) + k;
+				let v = document.getElementById(`${name}_value`).value;
+				v = toLEHex(v.length / 2, 4) + v;
+				return toLEHex(1, 4) + k + v;
 			}
 			default: {
 				return document.getElementById(name).value;
