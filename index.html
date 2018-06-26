@@ -1,5 +1,6 @@
 <html>
 <head>
+	<link rel="stylesheet" type="text/css" href="./css/styles.css">
 	<script src="./nacl-fast.min.js"></script>
 	<script src="./xxhash.min.js"></script>
 	<script src="./js/utils.js"></script>
@@ -9,12 +10,15 @@
 	<script src="./js/form.js"></script>
 </head>
 <body>
-	Sender: <input id="seed" onkeyup="updateInput(); updateExtrinsic()"/> = <input readonly id="pubkey"/><span id="pubkey_bal"></span><br/>
+	Sender: <input id="seed" placeholder="Enter Sender Name (i.e. Charlie)" onkeyup="updateInput(); updateExtrinsic()"/>
+	Public Key: <input readonly id="pubkey"/>
+	Balance: <span id="pubkey_bal"></span><br/>
 	Index: <input id="index" onkeyup="updateExtrinsic()"/><br/>
 	Call: <select id="call" onchange="updateCall()"></select>
 	<div id="params"></div>
 	Inner: <input readonly id="inner"/><br/>
 	Sig: <input readonly id="sig"/><br/>
+	Request:
 	<div style="color: #888; font-size: small; font-family: monospace">
 		curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"author_submitExtrinsic","params":["0x
 		<span id="signed"></span>

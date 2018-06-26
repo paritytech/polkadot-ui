@@ -1,0 +1,2 @@
+input { width:200px; }
+input[readonly] { background-color: lightgray; }
